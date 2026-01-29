@@ -9,6 +9,25 @@ import tempfile
 import os
 import re
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
+def get_openai_api_key() -> str | None:
+    # 1) Streamlit Cloud Secrets
+    try:
+        key = st.secrets.get("OPENAI_API_KEY")
+        if key:
+            return str(key).strip()
+    except Exception:
+        pass
+
+    # 2) Environment variable (.env loads into env)
+    key = os.getenv("OPENAI_API_KEY")
+    return key.strip() if key else None
+
+
+
 if "session_evidence" not in st.session_state:
     st.session_state.session_evidence = []
 

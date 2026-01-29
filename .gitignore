@@ -6,15 +6,13 @@ __pycache__/
 .venv/
 venv/
 
-# Generated indexes / artifacts
-data/index/
-
-# Raw PDFs (not needed in repo)
-data/raw_papers/
-
 # Backups
 *_backup.py
 
 # OS files
 .DS_Store
 Thumbs.db
+
+# Environment variables file
+# This file contains the OpenAI API key and other sensitive information
+.env
