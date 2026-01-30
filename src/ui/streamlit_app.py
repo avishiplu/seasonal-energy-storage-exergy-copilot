@@ -13,6 +13,19 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
+from core.values import (
+    ValueSpec,
+    SourceType,
+    Citation,
+    assumption_value,
+    external_value,
+    evidence_value,
+)
+from core.validate_values import require_source
+from tools.exergy_core import thermal_exergy_of_heat
+
+
+
 def get_openai_api_key() -> str | None:
     # 1) Streamlit Cloud Secrets
     try:
@@ -161,6 +174,24 @@ st.set_page_config(
     layout="centered"
 )
 
+def show_value(label: str, v: ValueSpec):
+    v = require_source(v)
+
+    st.write(f"**{label}**")
+    st.write(f"- value: {v.value} {v.unit}")
+    st.write(f"- source: {v.source_type.value}")
+
+    if v.citation:
+        st.write(f"- citation: {v.citation.pdf_name}, page {v.citation.page}")
+        if v.citation.short_quote:
+            st.write(f"- quote: {v.citation.short_quote}")
+
+    if v.meta:
+        st.write(f"- meta: {v.meta}")
+
+
+
+
 st.title("Academic PDF Claim-Checker (Strict, No Hallucinations)")
 st.markdown(
     """
@@ -168,6 +199,44 @@ st.markdown(
     Domain: Any academic PDFs (papers, reports, theses)
     """
 )
+
+st.header("TASK 0.3 Demo — all numbers are source-tagged")
+
+v_assumption = assumption_value(293.15, "K", meta={"note": "User provided T0"})
+
+v_external = external_value(
+    120.0,
+    "EUR/MWh",
+    meta={"source": "Demo placeholder", "time_range": "2022 (annual avg, DE)"},
+)
+
+Q_demo = external_value(
+    1_000_000.0,
+    "J",
+    meta={"source": "Demo placeholder", "time_range": "single-run"},
+)
+Tb_demo = assumption_value(353.15, "K", meta={"note": "Assumed boundary temperature"})
+T0_demo = assumption_value(293.15, "K", meta={"note": "Assumed reference environment temperature"})
+
+v_computed = thermal_exergy_of_heat(Q=Q_demo, Tb_K=Tb_demo, T0_K=T0_demo)
+
+
+v_evidence = evidence_value(
+    0.72,
+    "-",
+    citation=Citation(
+        pdf_name="ExamplePaper.pdf",
+        page=5,
+        chunk_id="chunk_12",
+        short_quote="Electrolyzer efficiency is 0.72",
+    ),
+)
+
+show_value("Assumption: T0", v_assumption)
+show_value("External: Electricity price", v_external)
+show_value("Computed: Exergy of heat", v_computed)
+show_value("Evidence: Electrolyzer efficiency", v_evidence)
+
 
 st.subheader("1) Upload PDFs")
 
@@ -471,7 +540,7 @@ if is_found:
     )
 
     if wants_equation:
-        from equation_tool import retrieve_equations
+        from tools.equation_tool import retrieve_equations
 
 
         st.subheader("Extracted equation(s)")
