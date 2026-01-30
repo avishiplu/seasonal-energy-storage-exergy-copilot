@@ -2,52 +2,64 @@ from __future__ import annotations
 
 from core.values import ValueSpec, computed_value
 from core.validate_values import require_source
+from core.guardrails import refuse_if_T0_missing
+from tools.units import refuse_if_unit_ambiguous_energy
 
 
-def thermal_exergy_of_heat(Q: ValueSpec, Tb_K: ValueSpec, T0_K: ValueSpec) -> ValueSpec:
+def thermal_exergy_of_heat(
+    Q: ValueSpec,
+    Tb_K: ValueSpec,
+    T0_K: ValueSpec | None,
+) -> ValueSpec:
     """
-    Ex = Q * (1 - T0/Tb)
+    Exergy of heat:
+    Ex = Q * (1 - T0 / Tb)
 
-    Inputs (ValueSpec):
-      Q    : heat energy (J)
-      Tb_K : boundary temperature in Kelvin
-      T0_K : reference environment temperature in Kelvin
-
-    Output:
-      ValueSpec (COMPUTED), unit="J"
+    Refusal rules:
+    - Rule 0.4.1: refuse if T0 is missing
+    - Rule 0.4.2: refuse if energy unit is ambiguous
     """
 
-    # 1) Enforce source tagging
+    # --- Rule 0.4.1 ---
+    # If T0_K is None, this will raise RefusalError (NOT ValueError)
+    refuse_if_T0_missing(T0_K)
+
+    # After this line, we KNOW T0_K is not None
+    assert T0_K is not None
+
+    # Source validation
     require_source(Q)
     require_source(Tb_K)
     require_source(T0_K)
 
-    # 2) Convert to floats for math + comparisons
-    q = float(Q.value)
-    tb = float(Tb_K.value)
-    t0 = float(T0_K.value)
+    # Temperature units
+    if Tb_K.unit != "K" or T0_K.unit != "K":
+        raise ValueError("Temperatures must be in Kelvin (K).")
 
-    # 3) Validations
-    if q < 0:
-        raise ValueError("Q must be >= 0")
-    if tb <= 0 or t0 <= 0:
-        raise ValueError("Temperatures must be > 0 K")
-    if tb <= t0:
-        raise ValueError("Tb_K must be > T0_K for exergy-of-heat shortcut")
+    # --- Rule 0.4.2 ---
+    refuse_if_unit_ambiguous_energy(Q)
 
-    # 4) Compute
-    ex = q * (1.0 - (t0 / tb))
+    # This tool expects Joule
+    if Q.unit != "J":
+        raise ValueError("Q must be in Joule (J) for this tool.")
 
-    # 5) Return as computed ValueSpec with tool + input metadata
+    Tb = float(Tb_K.value)
+    T0 = float(T0_K.value)
+
+    if Tb <= 0 or T0 <= 0:
+        raise ValueError("Temperatures must be > 0 K.")
+
+    ex = float(Q.value) * (1.0 - T0 / Tb)
+
     return computed_value(
         value=ex,
         unit="J",
         tool_name="thermal_exergy_of_heat",
         meta={
             "inputs": {
-                "Q": {"value": Q.value, "unit": Q.unit, "source_type": Q.source_type.value},
-                "Tb_K": {"value": Tb_K.value, "unit": Tb_K.unit, "source_type": Tb_K.source_type.value},
-                "T0_K": {"value": T0_K.value, "unit": T0_K.unit, "source_type": T0_K.source_type.value},
+                "Q": {"value": Q.value, "unit": Q.unit, "source": Q.source_type.value},
+                "Tb_K": {"value": Tb_K.value, "unit": Tb_K.unit, "source": Tb_K.source_type.value},
+                "T0_K": {"value": T0_K.value, "unit": T0_K.unit, "source": T0_K.source_type.value},
             }
         },
     )

@@ -24,6 +24,9 @@ from core.values import (
 from core.validate_values import require_source
 from tools.exergy_core import thermal_exergy_of_heat
 
+from core.refusal import RefusalError
+from core.guardrails import refuse_if_delivery_boundary_missing
+from tools.exergy_checks import exergy_destruction_balance
 
 
 def get_openai_api_key() -> str | None:
@@ -190,6 +193,24 @@ def show_value(label: str, v: ValueSpec):
         st.write(f"- meta: {v.meta}")
 
 
+def run_with_refusal(fn, *args, **kwargs):
+    try:
+        return fn(*args, **kwargs), None
+    except RefusalError as e:
+        return None, e
+
+def show_refusal(e: RefusalError):
+    st.error(e.user_message)
+    st.caption(f"Why: {e.why}")
+
+    if e.missing:
+        st.caption("Missing / required:")
+        for m in e.missing:
+            st.write(f"- {m}")
+
+    if e.details:
+        st.caption("Details:")
+        st.json(e.details)
 
 
 st.title("Academic PDF Claim-Checker (Strict, No Hallucinations)")
@@ -238,6 +259,44 @@ show_value("Computed: Exergy of heat", v_computed)
 show_value("Evidence: Electrolyzer efficiency", v_evidence)
 
 
+
+
+st.subheader("TASK 0.4 — Refuse-to-compute demo")
+
+# --- 0.4.4 Delivery boundary missing ---
+delivery_boundary = None
+_, err = run_with_refusal(refuse_if_delivery_boundary_missing, delivery_boundary)
+if err:
+    st.markdown("**0.4.4 Delivery boundary missing**")
+    show_refusal(err)
+
+# --- 0.4.1 T0 missing ---
+st.markdown("**0.4.1 T0 missing**")
+Tb = assumption_value(343.15, "K", meta={"note": "DH boundary temperature"})
+Qj = external_value(5.0e9, "J", meta={"source": "Demo external input", "time_range": "2024"})
+Ex, err = run_with_refusal(thermal_exergy_of_heat, Qj, Tb, None)
+if err:
+    show_refusal(err)
+
+# --- 0.4.2 Unit ambiguous: MWh/kWh/Wh without meta.energy_kind ---
+st.markdown("**0.4.2 Unit ambiguous: MWh thermal vs electric**")
+T0 = assumption_value(288.15, "K", meta={"note": "Reference temperature"})
+Q_mwh_amb = external_value(1.0, "MWh", meta={"source": "Demo external input", "time_range": "2024"})
+Ex, err = run_with_refusal(thermal_exergy_of_heat, Q_mwh_amb, Tb, T0)
+if err:
+    show_refusal(err)
+
+# --- 0.4.3 Negative exergy destruction ---
+st.markdown("**0.4.3 Negative exergy destruction**")
+Ex_in = external_value(100.0, "J", meta={"source": "Demo", "time_range": "2024"})
+Ex_out = external_value(120.0, "J", meta={"source": "Demo", "time_range": "2024"})  # out > in -> negative
+Ex_dest, err = run_with_refusal(exergy_destruction_balance, Ex_in, Ex_out)
+if err:
+    show_refusal(err)
+
+
+
+
 st.subheader("1) Upload PDFs")
 
 uploaded_files = st.file_uploader(
@@ -245,6 +304,7 @@ uploaded_files = st.file_uploader(
     type=["pdf"],
     accept_multiple_files=True
 )
+
 
 # Session state init
 if "upload_dir" not in st.session_state:
