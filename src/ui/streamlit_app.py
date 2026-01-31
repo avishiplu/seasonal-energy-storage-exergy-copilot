@@ -178,7 +178,7 @@ st.set_page_config(
 )
 
 def show_value(label: str, v: ValueSpec):
-    v = require_source(v)
+    require_source(v)
 
     st.write(f"**{label}**")
     st.write(f"- value: {v.value} {v.unit}")
