@@ -19,14 +19,15 @@ from core.values import (
     Citation,
     assumption_value,
     external_value,
-    evidence_value,
+    evidence_value
 )
-from core.validate_values import require_source
-from tools.exergy_core import thermal_exergy_of_heat
+
 
 from core.refusal import RefusalError
 from core.guardrails import refuse_if_delivery_boundary_missing
 from tools.exergy_checks import exergy_destruction_balance
+from core.science_config import FUNCTIONAL_UNIT
+
 
 
 def get_openai_api_key() -> str | None:
@@ -214,12 +215,14 @@ def show_refusal(e: RefusalError):
 
 
 st.title("Academic PDF Claim-Checker (Strict, No Hallucinations)")
+st.caption(f"Functional unit (frozen): {FUNCTIONAL_UNIT.description}")
 st.markdown(
     """
     **Academic, document-grounded decision-support tool**  
     Domain: Any academic PDFs (papers, reports, theses)
     """
 )
+
 
 st.header("TASK 0.3 Demo — all numbers are source-tagged")
 
