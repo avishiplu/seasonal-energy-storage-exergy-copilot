@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from core.values import ValueSpec, computed_value
 from core.validate_values import require_source
-from core.guardrails import refuse_if_T0_missing
+from core.guardrails import refuse_if_T0_missing, refuse_if_Tb_not_above_T0
 from tools.units import refuse_if_unit_ambiguous_energy
 
 
@@ -48,6 +48,8 @@ def thermal_exergy_of_heat(
 
     if Tb <= 0 or T0 <= 0:
         raise ValueError("Temperatures must be > 0 K.")
+
+    refuse_if_Tb_not_above_T0(Tb_K=Tb_K, T0_K=T0_K)
 
     ex = float(Q.value) * (1.0 - T0 / Tb)
 

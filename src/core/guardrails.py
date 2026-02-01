@@ -51,3 +51,34 @@ def refuse_if_delivery_boundary_missing(delivery_boundary: Optional[dict]) -> No
             ),
             missing=["delivery_boundary.name"],
         )
+
+
+def refuse_if_Tb_not_above_T0(Tb_K: ValueSpec, T0_K: ValueSpec) -> None:
+    """
+    Phase 1.4 validity rule:
+    Exergy-of-heat shortcut requires Tb > T0.
+    """
+    from core.validate_values import require_source
+
+    require_source(Tb_K)
+    require_source(T0_K)
+
+    if Tb_K.unit != "K" or T0_K.unit != "K":
+        raise RefusalError(
+            code="REFUSE_TEMP_UNIT_NOT_K",
+            user_message="Cannot compute because temperature unit is not Kelvin (K).",
+            why="Tb and T0 must be provided in Kelvin for exergy calculations.",
+            missing=["Tb_K.unit=K", "T0_K.unit=K"],
+        )
+
+    Tb = float(Tb_K.value)
+    T0 = float(T0_K.value)
+
+    if Tb <= T0:
+        raise RefusalError(
+            code="REFUSE_TB_BELOW_OR_EQUAL_T0",
+            user_message="Cannot compute exergy of heat because Tb is not above T0.",
+            why="Shortcut Ex = Q*(1 - T0/Tb) requires Tb > T0.",
+            missing=["Tb_K > T0_K"],
+            details={"Tb_K": Tb, "T0_K": T0},
+        )
