@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from core.values import ValueSpec
-from core.refusal import RefusalError
+from src.core.values import ValueSpec
+from src.core.refusal import RefusalError
 
 
 def refuse_if_T0_missing(T0_K: Optional[ValueSpec]) -> None:
@@ -58,7 +58,7 @@ def refuse_if_Tb_not_above_T0(Tb_K: ValueSpec, T0_K: ValueSpec) -> None:
     Phase 1.4 validity rule:
     Exergy-of-heat shortcut requires Tb > T0.
     """
-    from core.validate_values import require_source
+    from src.core.validate_values import require_source
 
     require_source(Tb_K)
     require_source(T0_K)

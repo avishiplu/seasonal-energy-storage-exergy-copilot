@@ -3,9 +3,9 @@ sys.path.append("src")
 
 import pytest
 
-from core.values import assumption_value, external_value
-from core.refusal import RefusalError
-from tools.exergy_core import thermal_exergy_of_heat
+from src.core.values import assumption_value, external_value
+from src.core.refusal import RefusalError
+from src.tools.exergy_core import thermal_exergy_of_heat
 
 
 def test_refuse_when_Tb_below_T0():

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from core.values import ValueSpec, computed_value
-from core.validate_values import require_source
-from core.guardrails import refuse_if_T0_missing, refuse_if_Tb_not_above_T0
-from tools.units import refuse_if_unit_ambiguous_energy
+from src.core.values import ValueSpec, computed_value
+from src.core.validate_values import require_source
+from src.core.guardrails import refuse_if_T0_missing, refuse_if_Tb_not_above_T0
+from src.tools.units import convert_energy_to_J, normalize_temperature_to_K
+
 
 
 def thermal_exergy_of_heat(
@@ -27,18 +28,20 @@ def thermal_exergy_of_heat(
     # After this line, we KNOW T0_K is not None
     assert T0_K is not None
 
+    # Phase 3: normalize temperatures to Kelvin (allow °C input)
+    Tb_K = normalize_temperature_to_K(Tb_K)
+    T0_K = normalize_temperature_to_K(T0_K)
+
+    # Phase 3: normalize energy to Joule (allow Wh/kWh/MWh, enforce meta.energy_kind)
+    Q = convert_energy_to_J(Q)
+
+
     # Source validation
     require_source(Q)
     require_source(Tb_K)
     require_source(T0_K)
 
-    # Temperature units
-    if Tb_K.unit != "K" or T0_K.unit != "K":
-        raise ValueError("Temperatures must be in Kelvin (K).")
-
-    # --- Rule 0.4.2 ---
-    refuse_if_unit_ambiguous_energy(Q)
-
+    
     # This tool expects Joule
     if Q.unit != "J":
         raise ValueError("Q must be in Joule (J) for this tool.")

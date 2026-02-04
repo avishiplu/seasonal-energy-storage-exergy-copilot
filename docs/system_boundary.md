@@ -1,3 +1,8 @@
+NOTE:
+The technology-specific lists below are EXAMPLES.
+The boundary rule itself is TECHNOLOGY-AGNOSTIC
+and applies to any present or future energy storage system.
+
 # System Boundary (Frozen)
 
 ## Boundary rule (global)
