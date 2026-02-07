@@ -14,9 +14,11 @@ class StageChain:
 
     total_losses: dict[str, ValueSpec] = field(default_factory=dict)
     total_exergy_destruction: ValueSpec | None = None
+    system_exergy_efficiency: ValueSpec | None = None
+
 
     def validate(self) -> None:
-        # empty list => refusepython -c "from src.core.scenario import Scenario; print('OK')"
+        
         if not self.stages:
             raise RefusalError(
                 code="REFUSE_STAGECHAIN_EMPTY",

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from core.values import ValueSpec, computed_value
-from core.refusal import RefusalError
-from core.validate_values import require_source
+from src.core.values import ValueSpec, computed_value
+from src.core.refusal import RefusalError
+from src.core.validate_values import require_source
 
 
 def exergy_destruction_balance(Ex_in: ValueSpec, Ex_out: ValueSpec) -> ValueSpec:
