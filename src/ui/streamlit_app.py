@@ -1,4 +1,4 @@
-# src/streamlit_app.py
+# src/ui/streamlit_app.py
 
 import sys
 sys.path.append("src")
@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-from core.values import (
+from src.core.values import (
     ValueSpec,
     SourceType,
     Citation,
@@ -23,10 +23,14 @@ from core.values import (
 )
 
 
-from core.refusal import RefusalError
-from core.guardrails import refuse_if_delivery_boundary_missing
-from tools.exergy_checks import exergy_destruction_balance
-from core.science_config import FUNCTIONAL_UNIT
+from src.core.values import ...
+from src.core.refusal import RefusalError
+from src.core.guardrails import refuse_if_delivery_boundary_missing
+from src.tools.exergy_checks import exergy_destruction_balance
+from src.core.science_config import FUNCTIONAL_UNIT
+from src.core.validate_values import require_source
+from src.tools.exergy_core import thermal_exergy_of_heat
+
 
 
 
