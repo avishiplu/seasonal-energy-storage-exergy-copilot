@@ -16,3 +16,29 @@ Thumbs.db
 # Environment variables file
 # This file contains the OpenAI API key and other sensitive information
 .env
+
+# -----------------------------------
+# Project generated data
+# -----------------------------------
+
+# Cached data (API downloads, simulation state)
+data/cache/
+data/index/
+
+# Database files
+*.db
+
+# Generated CSV exports
+*.csv
+
+# Backup PDFs and scratch files
+Backup/
+
+# Agent runtime state
+data/cache/phase7_agent_state.json
+
+# Streamlit cache
+.streamlit/
+
+# Logs (if any)
+*.log
