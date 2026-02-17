@@ -1,164 +1,174 @@
-# Academic PDF Claim Checker & Equation Extractor
+Seasonal Energy Storage Exergy Copilot
+Sprint 3 – Agent-Based Application
 
-Sprint 2 — AI Engineering
+------------------------------------------------------------
+1. What This Application Does
+------------------------------------------------------------
 
----
+This application compares different seasonal energy storage
+systems using exergy analysis.
 
-## Project Overview
+Instead of manually collecting equations and guessing inputs,
+the system:
 
-This project is developed as part of **AI Engineering – Sprint 2**.
+1) Reads scientific PDFs
+2) Extracts equations and parameter hints
+3) Detects which inputs are missing
+4) Asks the user for only the missing values
+5) Stores user inputs as “Assumptions”
+6) Runs deterministic exergy calculations
+7) Displays structured and transparent results
 
-The application is a **strict academic PDF claim checker** that verifies whether a claim or equation is **explicitly present in an academic paper** and extracts it in structured formats.
+The goal is to make system comparison:
 
-This is **not** a generic “chat with PDF” system.
+- Transparent
+- Reproducible
+- Evidence-aware
+- Structured
 
-The core focus is:
 
-* Retrieval-Augmented Generation (RAG)
-* Tool-based document retrieval
-* Hallucination-free, evidence-based answers
+------------------------------------------------------------
+2. Systems That Can Be Compared
+------------------------------------------------------------
 
----
+Examples:
 
-## Assignment Scope (Sprint 2)
+- Metal Hydride seasonal storage
+- PTES (Pumped Thermal Energy Storage)
+- Electrolyzer → Hydrogen → Fuel Cell chain
 
-Sprint 2 focuses on:
+Each system is treated as a stage-based chain.
 
-* LangChain fundamentals
-* Retrieval-Augmented Generation (RAG)
-* Tool / function usage
-* Building a practical AI application with Streamlit
+The agent identifies what information is required
+for each component automatically.
 
-**Agents are intentionally NOT used**, as they are introduced in Sprint 3.
 
----
+------------------------------------------------------------
+3. How The Agent Works (Simple Explanation)
+------------------------------------------------------------
 
-## Core Design Principle
+The application runs in steps.
 
-The system enforces strict separation of responsibilities:
+STEP 1 – Upload PDFs (required)
+The user uploads scientific papers.
 
-Verification ≠ Extraction ≠ Computation
+STEP 2 – Run Analysis
+The agent:
+    - Builds a search index
+    - Extracts equation-like lines
+    - Tags reliability (VALID / AMBIGUOUS / CONFLICT)
+    - Checks required inputs
+    - Generates a missing input list
 
-* Verification: checks if information explicitly exists
-* Extraction: retrieves exact text or equations
-* Computation: not performed in this sprint
+STEP 3 – Provide Missing Inputs
+If something is missing:
+    - The UI shows only those variables
+    - User enters values
+    - Values are stored as “Assumptions”
 
-If information is not written in the document, the system refuses to answer.
+STEP 4 – Run Again
+When no inputs are missing:
+    - Deterministic exergy tools are executed
+    - Results are calculated
 
----
+STEP 5 – Results Display
+The UI shows:
 
-## What the App Does
+    - System exergy efficiency
+    - Total exergy destruction
+    - Stage-by-stage breakdown
+    - Assumptions used
+    - Equation reliability summary
 
-### 1. Claim Verification (Strict)
 
-* Verifies whether a claim is explicitly supported by the uploaded PDF
-* Returns YES or NO
-* Provides exact PDF page citations
-* Returns “Not available in the document” if evidence is missing
-* Never guesses or hallucinates
+------------------------------------------------------------
+4. Important Design Rules
+------------------------------------------------------------
 
----
+1) The system does NOT invent physics.
+2) All thermodynamic calculations are deterministic.
+3) Every user input is labeled as Assumption.
+4) Extracted equations are reliability-tagged.
+5) Results are fully structured and inspectable.
 
-### 2. Retrieval-Augmented Generation (RAG)
 
-* PDFs are chunked and embedded
-* FAISS vector store is used for similarity search
-* Top-K relevant chunks are retrieved
-* The LLM answers strictly from retrieved context only
+------------------------------------------------------------
+5. Why This Is An Agent
+------------------------------------------------------------
 
----
+This application is not just a calculator.
 
-### 3. Tool Usage (Sprint 2 Compliant)
+It:
 
-The system uses **LangChain StructuredTools** for core operations.
+- Reacts to new PDFs
+- Detects missing data
+- Changes behavior depending on state
+- Stores memory (assumptions)
+- Continues execution after user interaction
 
-Tools implemented:
+The workflow is conditional:
 
-* retrieve_top_k
-  Retrieves top-K relevant document chunks from the vector store
+If missing inputs exist → ask user  
+If no missing inputs → compute  
+If new PDFs uploaded → reset and re-run retrieval  
 
-* embed_texts
-  Generates embeddings for document indexing
+This conditional multi-step behavior defines the agent.
 
-* load_index_and_metadata
-  Loads and inspects the vector index
 
-Tools are:
+------------------------------------------------------------
+6. What Makes This Useful For Comparison
+------------------------------------------------------------
 
-* Deterministic
-* Explicit
-* Non-autonomous (no agents)
+When comparing seasonal storage systems, the challenge is:
 
----
+- Different papers use different assumptions
+- Parameters are often missing
+- Equations may be incomplete
+- Efficiency numbers are not directly comparable
 
-### 4. Equation Extraction (Text-Based PDFs Only)
+This system solves that by:
 
-When a verified claim is equation-related:
+- Explicitly identifying required inputs
+- Separating evidence from assumptions
+- Running all systems through the same deterministic engine
+- Showing stage-by-stage exergy destruction
 
-* Equations are extracted directly from the PDF text layer
-* Supported formats:
 
-  * LaTeX
-  * ASCII
-  * JSON structure
-* Each equation includes page number and evidence text
+------------------------------------------------------------
+7. Limitations (Transparent)
+------------------------------------------------------------
 
-Scanned or image-only PDFs are not supported in this sprint.
+- Equation extraction is heuristic-based
+- Citation precision depends on PDF quality
+- The current stage chain is minimal but extensible
+- User-provided assumptions are not range-validated
 
----
 
-## Application Flow
+------------------------------------------------------------
+8. How To Run
+------------------------------------------------------------
 
-1. Upload academic PDF(s)
-2. Ask a question or claim
-3. Tool retrieves relevant document chunks
-4. LLM answers only using retrieved evidence
-5. Citations and evidence are displayed
-6. Equation extraction is triggered when applicable
+From project root:
 
----
+    streamlit run src/ui/streamlit_app.py
 
-## What This App Does NOT Do
+Then:
 
-* No OCR
-* No image-based PDF processing
-* No autonomous agents
-* No symbolic or numeric computation
-* No external knowledge usage
+Upload PDFs → Run Analysis → Fill Missing Inputs → Run Again
 
----
 
-## Technology Stack
+------------------------------------------------------------
+9. Sprint 3 Compliance Summary
+------------------------------------------------------------
 
-* Python
-* Streamlit
-* LangChain
-* OpenAI API
-* FAISS
-* PDF text parsing
+This application demonstrates:
 
----
+- Agent-based conditional workflow
+- User-interactive state loop
+- Structured retrieval + validation
+- Deterministic computation tools
+- Reliability metadata
+- Persistent agent memory
 
-## Project Status
-
-* RAG pipeline: Implemented
-* Tool-based retrieval: Implemented
-* Equation extraction (text-based): Implemented
-* UI: Functional
-* Agent-based autonomy: Intentionally excluded (Sprint 3)
-
----
-
-## Rationale
-
-The project prioritizes:
-
-* Academic correctness
-* Deterministic behavior
-* Zero hallucination tolerance
-
-If something is not explicitly written in the document, it is treated as non-existent.
-
----
-
-## End of README
+It satisfies Sprint 3 requirements for
+an applied AI agent system.
