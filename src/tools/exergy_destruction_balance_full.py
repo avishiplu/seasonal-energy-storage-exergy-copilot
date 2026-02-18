@@ -14,11 +14,11 @@ def exergy_destruction_balance_full(
 ) -> ValueSpec:
     """
     Ex_dest = Ex_in + W_in - Ex_out - W_out - Ex_loss
-    Refuse if negative beyond tolerance.
-    """
 
-    require_source(Ex_in)
-    require_source(Ex_out)
+    Robust rule:
+    - allow tiny negative due to floating noise -> clamp to 0
+    - refuse only if negative beyond tolerance (abs + relative)
+    """
 
     def _require_J(v: ValueSpec, name: str) -> None:
         require_source(v)
@@ -28,36 +28,55 @@ def exergy_destruction_balance_full(
                 user_message=f"Cannot compute because {name} is not in Joule (J).",
                 why="All exergy/work terms must be in Joule for the balance.",
                 missing=[f"{name}.unit=J"],
-                details={"got_unit": v.unit},
+                details={"term": name, "got_unit": v.unit},
             )
 
     _require_J(Ex_in, "Ex_in")
     _require_J(Ex_out, "Ex_out")
 
-    total = float(Ex_in.value) - float(Ex_out.value)
+    ex_in = float(Ex_in.value)
+    ex_out = float(Ex_out.value)
+    w_in = 0.0
+    w_out = 0.0
+    ex_loss = 0.0
 
     if W_in is not None:
         _require_J(W_in, "W_in")
-        total += float(W_in.value)
+        w_in = float(W_in.value)
 
     if W_out is not None:
         _require_J(W_out, "W_out")
-        total -= float(W_out.value)
+        w_out = float(W_out.value)
 
     if Ex_loss is not None:
         _require_J(Ex_loss, "Ex_loss")
-        total -= float(Ex_loss.value)
+        ex_loss = float(Ex_loss.value)
 
-    if total < -1e-9:
+    total_raw = ex_in + w_in - ex_out - w_out - ex_loss
+
+    # tolerance: absolute + relative (scale-aware)
+    abs_tol = 1e-6
+    rel_tol = 1e-9 * max(1.0, abs(ex_in), abs(ex_out), abs(w_in), abs(w_out), abs(ex_loss))
+    tol = max(abs_tol, rel_tol)
+
+    if total_raw < -tol:
         raise RefusalError(
             code="REFUSE_NEGATIVE_EXERGY_DESTRUCTION",
             user_message="Cannot compute because exergy destruction becomes negative.",
-            why="Second law violation or boundary mismatch.",
-            details={"Ex_dest": total},
+            why="Second law violation, boundary mismatch, or bookkeeping inconsistency beyond tolerance.",
+            missing=[],
+            details={
+                "Ex_in_J": ex_in,
+                "Ex_out_J": ex_out,
+                "W_in_J": w_in,
+                "W_out_J": w_out,
+                "Ex_loss_J": ex_loss,
+                "Ex_dest_raw_J": total_raw,
+                "tolerance_J": tol,
+            },
         )
 
-    if total < 0:
-        total = 0.0
+    total = 0.0 if total_raw < 0.0 else total_raw
 
     return computed_value(
         value=total,
@@ -65,11 +84,13 @@ def exergy_destruction_balance_full(
         tool_name="exergy_destruction_balance_full",
         meta={
             "inputs": {
-                "Ex_in": Ex_in.value,
-                "Ex_out": Ex_out.value,
-                "W_in": None if W_in is None else W_in.value,
-                "W_out": None if W_out is None else W_out.value,
-                "Ex_loss": None if Ex_loss is None else Ex_loss.value,
-            }
+                "Ex_in": ex_in,
+                "Ex_out": ex_out,
+                "W_in": w_in if W_in is not None else None,
+                "W_out": w_out if W_out is not None else None,
+                "Ex_loss": ex_loss if Ex_loss is not None else None,
+            },
+            "tolerance_J": tol,
+            "clamped": total_raw < 0.0,
         },
     )

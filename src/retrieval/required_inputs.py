@@ -40,6 +40,19 @@ REQUIRED_INPUTS: dict[ComponentType, List[RequiredInput]] = {
         RequiredInput(key="Tb_K", unit="K", critical=True, basis="thermal", notes="Boundary temperature for heat exergy"),
         RequiredInput(key="T0_K", unit="K", critical=True, notes="Reference environment temperature"),
     ],
+    ComponentType.PTES: [
+        RequiredInput(key="eta_collector", unit="1", critical=True, basis="thermal", notes="Solar collector efficiency"),
+        RequiredInput(key="A_collector_m2", unit="m2", critical=True, basis="thermal", notes="Collector area"),
+        RequiredInput(key="G_solar_Wm2", unit="W/m2", critical=True, basis="thermal", notes="Solar irradiance"),
+        RequiredInput(key="t_operation_s", unit="s", critical=True, basis="thermal", notes="Solar collection operation time"),
+
+        RequiredInput(key="UA_WK", unit="W/K", critical=True, basis="thermal", notes="Storage overall heat loss coefficient"),
+        RequiredInput(key="T_store_K", unit="K", critical=True, basis="thermal", notes="Storage temperature"),
+        RequiredInput(key="t_storage_s", unit="s", critical=True, basis="thermal", notes="Storage duration"),
+
+        RequiredInput(key="COP", unit="1", critical=True, basis="thermal", notes="Heat pump COP"),
+        RequiredInput(key="Tb_K", unit="K", critical=True, basis="thermal", notes="DH boundary temperature for heat exergy"),
+    ],
 }
 
 

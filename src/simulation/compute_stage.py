@@ -156,14 +156,46 @@ def compute_stage(stage: Stage, scenario: Scenario) -> Stage:
     # --------
     # 4.4.3 Exergy destruction (second law)
     # --------
-    Ex_dest = exergy_destruction_balance_full(
-        Ex_in=Ex_in_total,
-        Ex_out=Ex_out_total,
-        W_in=None,
-        W_out=None,
-        Ex_loss=Ex_loss_total,
-    )
+    try:
+        Ex_dest = exergy_destruction_balance_full(
+            Ex_in=Ex_in_total,
+            Ex_out=Ex_out_total,
+            W_in=None,
+            W_out=None,
+            Ex_loss=Ex_loss_total,
+        )
+    except RefusalError as e:
+        # Re-raise with stage context so UI can show exactly where it failed.
+        details = {}
+        if hasattr(e, "details") and isinstance(e.details, dict):
+            details.update(e.details)
+
+        details.update(
+            {
+                "stage_name": stage.name,
+                "stage_type": str(stage.stage_type),
+                "Tb_K": None if stage.Tb_K is None else {"value": stage.Tb_K.value, "unit": stage.Tb_K.unit},
+                "T0_K": {"value": scenario.T0_K.value, "unit": scenario.T0_K.unit},
+                "Ex_in_total": {"value": Ex_in_total.value, "unit": Ex_in_total.unit},
+                "Ex_out_total": {"value": Ex_out_total.value, "unit": Ex_out_total.unit},
+                "Ex_loss_total": {"value": Ex_loss_total.value, "unit": Ex_loss_total.unit},
+                "E_in_total": {"value": E_in_total.value, "unit": E_in_total.unit},
+                "E_out_total": {"value": E_out_total.value, "unit": E_out_total.unit},
+                "E_loss_total": {"value": E_loss_total.value, "unit": E_loss_total.unit},
+                "E_balance": {"value": E_balance.value, "unit": E_balance.unit},
+            }
+        )
+
+        raise RefusalError(
+            code=getattr(e, "code", "REFUSE_STAGE_EXERGY_DEST"),
+            user_message=getattr(e, "user_message", str(e)),
+            why=getattr(e, "why", "Stage-level exergy destruction check failed."),
+            missing=getattr(e, "missing", []),
+            details=details,
+        )
+
     computed["Ex_dest"] = Ex_dest
+
 
     # Return new frozen Stage
     return Stage(

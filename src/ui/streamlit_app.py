@@ -238,7 +238,14 @@ if run_clicked:
         # persist updated state from agent
         save_state_file(st.session_state.phase7_state)
     except RefusalError as e:
-        show_error_box(f"RefusalError: {e.user_message}")
+        st.error(f"RefusalError: {e.user_message}")
+        if hasattr(e, "why") and e.why:
+            st.caption(f"Why: {e.why}")
+        if hasattr(e, "details") and isinstance(e.details, dict) and e.details:
+            with st.expander("Refusal details (debug)", expanded=True):
+                st.json(e.details)
+        st.stop()
+
     except Exception as e:
         st.exception(e)
         st.stop()

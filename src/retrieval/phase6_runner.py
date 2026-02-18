@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set
 
 try:
     # Optional module (preferred). If not present, fallback keeps build stable.
@@ -34,8 +34,12 @@ ENABLE_REWRITE_CACHE = os.getenv("PHASE6_REWRITE_CACHE", "1") == "1"
 ENABLE_NUMERIC_GUARD = os.getenv("PHASE6_REWRITE_NUM_GUARD", "1") == "1"
 
 
-# --- simple mapping rules: required_input.key -> expected symbol hints
+# ------------------------------------------------------------
+# KEY_HINTS: required_input.key -> expected symbol hints
+# (Used to map extracted variables/equations to required keys)
+# ------------------------------------------------------------
 KEY_HINTS = {
+    # MH / general
     "eta_el": {"eta_el"},
     "eta_fc": {"eta_fc"},
     "COP": {"COP"},
@@ -53,6 +57,15 @@ KEY_HINTS = {
     "Tb_K": {"Tb"},
     "T_supply_K": {"T_supply"},
     "T_heat_K": {"T_heat"},
+
+    # PTES
+    "eta_collector": {"eta_collector", "eta_col", "collector efficiency"},
+    "A_collector_m2": {"A_collector_m2", "A_collector", "collector area"},
+    "G_solar_Wm2": {"G_solar_Wm2", "G_solar", "irradiance"},
+    "t_operation_s": {"t_operation_s", "t_operation", "operation time"},
+    "UA_WK": {"UA_WK", "UA", "heat loss coefficient"},
+    "T_store_K": {"T_store_K", "T_store", "storage temperature"},
+    "t_storage_s": {"t_storage_s", "t_storage", "storage duration"},
 }
 
 
@@ -72,7 +85,6 @@ def _candidate_key(ev) -> tuple:
     raw = (getattr(ev, "equation_text", "") or "")
     norm = " ".join(normalize_equation_text(raw).split())
     return (pdf, page, norm)
-
 
 
 def _rewrite_cache_key(raw: str) -> str:
@@ -136,8 +148,7 @@ def run_phase6_for_component(
     seen_candidates: Set[tuple] = set()
 
     # Cache rewrite results to avoid repeated LLM calls for same raw text (normalized)
-    rewrite_cache: Dict[str, tuple[str, str | None]] = {}
-
+    rewrite_cache: Dict[str, object] = {}
 
     # ------------------------------------------------------------
     # 2) Retrieve → Extract → Validate → (AI Rewrite optional)
@@ -145,9 +156,7 @@ def run_phase6_for_component(
     for q in queries:
         evidences = retrieve_equations(retriever=retriever, query=q, k=8)
 
-        # ------------------------------------------------------------
         # DEDUPE: same candidate can appear for many query variants
-        # ------------------------------------------------------------
         if ENABLE_DEDUPE:
             unique_evidences = []
             for ev in evidences:
@@ -167,16 +176,15 @@ def run_phase6_for_component(
             final_v = v_raw
             ai_notes = None
 
-            # --- rewrite metadata (spec 6.3B) ---
+            # rewrite metadata
             rewrite_flag = False
             original_equation = None
             rewrite_confidence = None
 
-            # Only run rewrite if AMBIGUOUS (spec 6.3/6.4 guard)
+            # Only run rewrite if AMBIGUOUS
             if ENABLE_AI and v_raw.tag == EqTag.AMBIGUOUS:
                 ctx = getattr(ev, "context_snippet", "") or ""
 
-                # store raw/original equation (spec 6.3B)
                 original_equation = ev.equation_text
 
                 # cache lookup
@@ -184,17 +192,7 @@ def run_phase6_for_component(
                 if ENABLE_REWRITE_CACHE and raw_key in rewrite_cache:
                     r = rewrite_cache[raw_key]
                 else:
-                    print("AI rewrite call starting for:", ev.pdf_name, ev.page)
                     r = ai_rewrite_equation(ev.equation_text, ctx)
-
-                    # AI may return multiple equations separated by newlines
-                    rewritten_lines = []
-                    if r.canonical_ascii and r.canonical_ascii != "UNSURE":
-                        for ln in r.canonical_ascii.splitlines():
-                            ln = ln.strip()
-                            if ln:
-                                rewritten_lines.append(ln)
-                    print("AI rewrite done.")
                     if ENABLE_REWRITE_CACHE:
                         rewrite_cache[raw_key] = r
 
@@ -210,30 +208,23 @@ def run_phase6_for_component(
                 ):
                     canon = "UNSURE"
                     rewrite_flag = False
-                    # keep a visible note
                     ai_notes = (getattr(r, "notes", None) or "")
                     ai_notes = (ai_notes + " | " if ai_notes else "") + (
                         "REWRITE_REJECTED: introduced numeric values not present in source text."
                     )
 
-                # Accept rewrite only if still not UNSURE
                 if canon and canon != "UNSURE":
-                    rewrite_flag = True  # rewrite accepted (spec 6.3B)
-
+                    rewrite_flag = True
                     v_ai = validate_equation_candidate(
                         canon,
                         allowed_variables=allowed_variables,
                     )
                     final_v = v_ai
-
-                    # prefer existing ai_notes (may include REWRITE_REJECTED), else r.notes
                     if ai_notes is None:
                         ai_notes = getattr(r, "notes", None)
+                    # rewrite_confidence left None unless supported by r in future
 
-                    # Optional future support:
-                    # rewrite_confidence = getattr(r, "confidence", None)
-
-            # citation unchanged (spec)
+            # citation unchanged
             cit = Citation(
                 pdf_name=ev.pdf_name,
                 page=int(ev.page),
