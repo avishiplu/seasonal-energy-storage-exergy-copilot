@@ -42,3 +42,6 @@ data/cache/phase7_agent_state.json
 
 # Logs (if any)
 *.log
+
+# Synthetic pdf documents
+data/raw_papers/*.pdf
